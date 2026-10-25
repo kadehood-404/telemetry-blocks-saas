@@ -17,26 +17,36 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Endpoint 1: Real clients POST their telemetry data here
+    // Endpoint 1: Real SDK clients POST their structured telemetry data here
   if (req.url === '/v1/telemetry' && req.method === 'POST') {
     let body = '';
     req.on('data', chunk => body += chunk.toString());
     req.on('end', () => {
       try {
-        const parsed = JSON.parse(body);
-        if (parsed.value !== undefined) {
-          latestMetric = Number(parsed.value);
-          console.log(`📥 Received live metric from client: ${latestMetric}`);
+        const packet = JSON.parse(body);
+        
+        // Handle sorting depending on what the SDK tracked
+        if (packet.type === 'metric') {
+          latestMetric = Number(packet.value);
+          console.log(`📥 [METRIC] ${packet.appId} -> ${packet.name}: ${latestMetric}`);
+        } else if (packet.type === 'log') {
+          console.log(`📝 [LOG] [${packet.level.toUpperCase()}] ${packet.appId}: ${packet.message}`);
+        } else if (packet.type === 'trace') {
+          console.log(`⏱️ [TRACE] ${packet.appId} -> ${packet.operationName} took ${packet.durationMs}ms`);
+          // Set to latest metric so the chart shows execution time drops
+          latestMetric = packet.durationMs; 
         }
+
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ status: 'acknowledged' }));
       } catch (e) {
         res.writeHead(400);
-        res.end('Invalid JSON payload');
+        res.end('Invalid Payload');
       }
     });
     return;
   }
+
 
   // Endpoint 2: The frontend UI polls this to get the latest metric
   if (req.url === '/api/live' && req.method === 'GET') {
