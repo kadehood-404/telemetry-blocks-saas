@@ -1,18 +1,43 @@
-<!-- 1. Include your asset via your telemetry subdomain CDN -->
-<script src="https://sigil-framework.space"></script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Telemetry UI System Showcase</title>
+  <style>
+    body { background: #020617; color: #f8fafc; padding: 40px; font-family: sans-serif; }
+    .grid { display: flex; gap: 20px; max-width: 900px; margin-top: 20px; align-items: flex-start; }
+  </style>
+</head>
+<body>
 
-<!-- 2. Drop the tag straight into their markup -->
-<telemetry-card id="ggr-tracker">
-  <span slot="title">Live GGR (USD)</span>
-</telemetry-card>
+  <h1>Live Telemetry Blocks Showcase</h1>
+  <p>Interactive web components streaming updates natively without virtual DOM overhead.</p>
 
-<script>
-  // 3. Connect their active data pipeline/WebSocket directly to the attribute
-  const card = document.getElementById('ggr-tracker');
+  <div class="grid">
+    <!-- Component 1: Card block from previous step -->
+    <telemetry-card id="ggr-counter"><span slot="title">Incoming Operations/sec</span></telemetry-card>
+    
+    <!-- Component 2: High performance canvas chart engine -->
+    <telemetry-chart id="ggr-stream-chart"></telemetry-chart>
+  </div>
+
+  <script src="telemetry-card.js"></script>
+  <script src="telemetry-chart.js"></script>
   
-  // Simulating incoming real-time streaming intervals
-  setInterval(() => {
-    const freshDataPoint = (Math.random() * 1000).toFixed(2);
-    card.setAttribute('value', freshDataPoint);
-  }, 1000);
-</script>
+  <script>
+    const cardNode = document.getElementById('ggr-counter');
+    const chartNode = document.getElementById('ggr-stream-chart');
+    
+    let baseValue = 450;
+    
+    // Simulating rapid, zero-lag streaming intervals targeting components
+    setInterval(() => {
+      const volatility = (Math.random() - 0.5) * 40;
+      baseValue = Math.max(100, Math.floor(baseValue + volatility));
+      
+      cardNode.setAttribute('value', baseValue);
+      chartNode.setAttribute('stream-value', baseValue);
+    }, 250);
+  </script>
+</body>
+</html>
