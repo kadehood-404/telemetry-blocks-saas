@@ -2,18 +2,23 @@
 class TelemetryChart {
     constructor(canvasId, maxPoints = 100) {
         this.canvas = document.getElementById(canvasId);
+        if (!this.canvas) {
+            console.error(`Canvas element with ID '${canvasId}' not found.`);
+            return;
+        }
+        
         this.ctx = this.canvas.getContext('2d');
         this.maxPoints = maxPoints;
         this.data = new Float32Array(maxPoints);
         this.head = 0;
         this.count = 0;
         
-        // Render configuration
+        // Premium dashboard design theme parameters
         this.colors = {
             line: '#00ffcc',
             grid: 'rgba(255, 255, 255, 0.05)',
             text: '#64748b',
-            fillStart: 'rgba(0, 255, 204, 0.15)',
+            fillStart: 'rgba(0, 255, 204, 0.12)',
             fillEnd: 'rgba(0, 255, 204, 0)'
         };
         
@@ -22,9 +27,12 @@ class TelemetryChart {
     }
 
     resize() {
+        if (!this.canvas) return;
         const dpr = window.devicePixelRatio || 1;
         this.width = this.canvas.clientWidth;
         this.height = this.canvas.clientHeight;
+        
+        // Scale canvas backing store instantly for crisp rendering on high-DPI screens
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
         this.ctx.scale(dpr, dpr);
@@ -46,23 +54,24 @@ class TelemetryChart {
         for (let i = 0; i <= lines; i++) {
             const y = (this.height / lines) * i;
             
-            // Draw horizontal grid line
+            // Draw clean horizontal background lines
             this.ctx.beginPath();
             this.ctx.moveTo(0, y);
             this.ctx.lineTo(this.width, y);
             this.ctx.stroke();
 
-            // Render matching axis metric value
+            // Right-aligned localized baseline axis metrics
             const val = yMax - ((yMax - yMin) / lines) * i;
-            this.ctx.fillText(val.toFixed(1), 8, y - 4);
+            this.ctx.fillText(Math.floor(val).toString(), this.width - 28, y - 4);
         }
     }
 
     render() {
+        if (!this.ctx || this.count === 0) return;
+        
         this.ctx.clearRect(0, 0, this.width, this.height);
-        if (this.count === 0) return;
 
-        // Auto-scale bounds based on current buffer window
+        // Dynamic auto-scaling bound configurations
         let yMin = Infinity;
         let yMax = -Infinity;
         for (let i = 0; i < this.count; i++) {
@@ -71,19 +80,18 @@ class TelemetryChart {
             if (val > yMax) yMax = val;
         }
         
-        // Prevent flatline division by zero issues
-        if (yMax === yMin) { yMax += 1; yMin -= 1; }
+        // Prevent crashes on static inputs or flatlines
+        if (yMax === yMin) { yMax += 10; yMin -= 10; }
         const yRange = yMax - yMin;
 
-        // 1. Draw Background Grid Infrastructure First
+        // 1. Draw Grid Underlay Layer
         this.drawGrid(yMin, yMax);
 
-        // 2. Compute Transform Vectors via Single Path Loop
-        this.ctx.beginPath();
-        
         const stepX = this.width / (this.maxPoints - 1);
         const startIndex = this.count === this.maxPoints ? this.head : 0;
 
+        // 2. Generate Hardware Accelerated Path Construction Loop
+        const path = new Path2D();
         for (let i = 0; i < this.count; i++) {
             const bufferIndex = (startIndex + i) % this.maxPoints;
             const val = this.data[bufferIndex];
@@ -92,79 +100,82 @@ class TelemetryChart {
             const y = this.height - ((val - yMin) / yRange) * this.height;
 
             if (i === 0) {
-                this.ctx.moveTo(x, y);
+                path.moveTo(x, y);
             } else {
-                this.ctx.lineTo(x, y);
+                path.lineTo(x, y);
             }
         }
 
-        // Clone line path properties to safely paint Area Fill underneath
-        const linePath = new Path2D(this.ctx);
-
-        // 3. Render Area Fill Segment
+        // 3. Render Area Fill Segment Below the Path
         if (this.count > 1) {
+            const fillPath = new Path2D(path);
             const lastX = (this.count - 1) * stepX;
-            this.ctx.lineTo(lastX, this.height);
-            this.ctx.lineTo(0, this.height);
-            this.ctx.closePath();
+            fillPath.lineTo(lastX, this.height);
+            fillPath.lineTo(0, this.height);
+            fillPath.closePath();
 
             const gradient = this.ctx.createLinearGradient(0, 0, 0, this.height);
             gradient.addColorStop(0, this.colors.fillStart);
             gradient.addColorStop(1, this.colors.fillEnd);
             
             this.ctx.fillStyle = gradient;
-            this.ctx.fill();
+            this.ctx.fill(fillPath);
         }
 
-        // 4. Render Stroke Path Overlay Cleanly
-        this.ctx.beginPath();
-        this.ctx.stroke(linePath);
+        // 4. Paint Primary Core Stroke Path Accent Over the Area
         this.ctx.lineWidth = 2;
         this.ctx.strokeStyle = this.colors.line;
         this.ctx.lineJoin = 'round';
-        this.ctx.stroke();
+        this.ctx.lineCap = 'round';
+        this.ctx.stroke(path);
     }
 }
 
-// Append directly to the bottom of telemetry-chart.js
+// ============================================================================
+// LIVE SIMULATION & DRIVER ENGINE
+// ============================================================================
 
-// 1. Instantiation Hook
-const chart = new TelemetryChart('telemetryCanvas', 120);
-
-// 2. High-Fidelity Multi-Frequency Signal Simulator
-let tick = 0;
-function generateTelemetryMetric() {
-    tick += 0.05;
-    
-    // Combine base frequencies with simulated high-frequency noise
-    const baseSignal = Math.sin(tick) * 25;
-    const secondaryOscillation = Math.cos(tick * 2.3) * 10;
-    const randomJitter = (Math.random() - 0.5) * 4;
-    
-    // Normalize to a simulated 0-100% telemetry value
-    const finalValue = Math.max(0, Math.min(100, 50 + baseSignal + secondaryOscillation + randomJitter));
-    
-    // Feed data straight into the continuous Ring Buffer
-    chart.push(finalValue);
-}
-
-// 3. Main Frame Loop Interface
-function frameLoop() {
-    // Inject mock metric package
-    generateTelemetryMetric();
-    
-    // Request hardware-accelerated canvas redraw
-    chart.render();
-    
-    requestAnimationFrame(frameLoop);
-}
-
-// 4. Safe Document Mount Trigger
 document.addEventListener('DOMContentLoaded', () => {
-    // Verify canvas DOM node exists before firing frame loops
-    if (document.getElementById('telemetryCanvas')) {
-        frameLoop();
-    } else {
-        console.warn("Telemetry Canvas anchor '#telemetryCanvas' not found in document DOM.");
+    const canvasId = 'telemetryCanvas';
+    const metricTextId = 'metricValue';
+    
+    // Check if the HTML anchor container placeholder exists before launching frame ticks
+    if (!document.getElementById(canvasId)) {
+        console.warn(`Telemetry runtime paused: '#${canvasId}' canvas element missing from template.`);
+        return;
     }
+
+    // Initialize chart with 120 tracking intervals
+    const chart = new TelemetryChart(canvasId, 120);
+    const metricLabelNode = document.getElementById(metricTextId);
+
+    let tick = 0;
+    
+    function executionFrameLoop() {
+        tick += 0.04;
+        
+        // Multi-frequency sinusoidal algorithms to mimic complex servers
+        const coreSignal = Math.sin(tick) * 200;
+        const structuralWave = Math.cos(tick * 1.7) * 80;
+        const hardwareJitter = (Math.random() - 0.5) * 35;
+        
+        // Map calculations directly into real operations data ranges
+        const generatedMetric = Math.max(150, Math.floor(650 + coreSignal + structuralWave + hardwareJitter));
+        
+        // Feed real data metrics array buffer window
+        chart.push(generatedMetric);
+        
+        // Mirror current operations scale string explicitly to structural layout card text element
+        if (metricLabelNode) {
+            metricLabelNode.textContent = generatedMetric.toLocaleString();
+        }
+
+        // Refresh canvas surface layers
+        chart.render();
+        
+        requestAnimationFrame(executionFrameLoop);
+    }
+
+    // Fire off telemetry processing execution loops
+    executionFrameLoop();
 });

@@ -21,8 +21,23 @@
     <telemetry-chart id="ggr-stream-chart"></telemetry-chart>
   </div>
 
+  <div class="telemetry-card" style="background: #0b1329; border-radius: 8px; padding: 16px; width: 320px; border: 1px solid #1e293b;">
+    <div style="font-size: 11px; text-transform: uppercase; color: #64748b; font-family: monospace; letter-spacing: 0.05em;">
+        Incoming Operations/Sec
+    </div>
+    <div id="metricValue" style="font-size: 24px; font-weight: bold; color: #ffffff; font-family: sans-serif; margin: 4px 0 12px 0;">
+        0
+    </div>
+    
+    <!-- CRITICAL FIX: The canvas element matching your JS instantiation id -->
+    <div style="width: 100%; height: 120px; position: relative;">
+        <canvas id="telemetryCanvas" style="width: 100%; height: 100%; display: block;"></canvas>
+    </div>
+</div>
+
   <script src="telemetry-card.js"></script>
   <script src="telemetry-chart.js"></script>
+
   
     <script>
     const cardNode = document.getElementById('ggr-counter');
