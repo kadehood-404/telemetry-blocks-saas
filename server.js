@@ -24,21 +24,40 @@ const server = http.createServer((req, res) => {
     req.on('end', () => {
       try {
         const packet = JSON.parse(body);
+        const ts = packet.timestamp || Date.now();
         
-        // Handle sorting depending on what the SDK tracked
-        if (packet.type === 'metric') {
-          latestMetric = Number(packet.value);
-          console.log(`📥 [METRIC] ${packet.appId} -> ${packet.name}: ${latestMetric}`);
-        } else if (packet.type === 'log') {
-          console.log(`📝 [LOG] [${packet.level.toUpperCase()}] ${packet.appId}: ${packet.message}`);
-        } else if (packet.type === 'trace') {
-          console.log(`⏱️ [TRACE] ${packet.appId} -> ${packet.operationName} took ${packet.durationMs}ms`);
-          // Set to latest metric so the chart shows execution time drops
-          latestMetric = packet.durationMs; 
-        }
+        // SECURITY CHECK: Intercept packet and query SQLite accounts table
+        dbEngine.verifyApiKey(packet.apiKey, (auth) => {
+          if (!auth.valid) {
+            res.writeHead(401, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Unauthorized: Invalid or missing API key.' }));
+            console.log(`🚫 [BLOCKED] Dropped unauthenticated payload trying to use key: ${packet.apiKey}`);
+            return;
+          }
+          
+          if (auth.status === 'suspended') {
+            res.writeHead(403, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Forbidden: This account has been suspended for unpaid billing.' }));
+            return;
+          }
 
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ status: 'acknowledged' }));
+          // If authorized, parse and save the telemetry data
+          if (packet.type === 'metric') {
+            dbEngine.insertMetric(packet.appId, packet.name, packet.value, ts);
+            console.log(`💾 [DB SAVED] Metric: ${packet.name} -> ${packet.value}`);
+          } else if (packet.type === 'log') {
+            dbEngine.insertLog(packet.appId, packet.level, packet.message, ts);
+            console.log(`💾 [DB SAVED] Log: [${packet.level.toUpperCase()}] ${packet.message}`);
+          } else if (packet.type === 'trace') {
+            dbEngine.insertTrace(packet.appId, packet.operationName, packet.durationMs, ts);
+            dbEngine.insertMetric(packet.appId, packet.operationName, packet.durationMs, ts);
+            console.log(`💾 [DB SAVED] Trace: ${packet.operationName} -> ${packet.durationMs}ms`);
+          }
+
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ status: 'saved_to_disk' }));
+        });
+
       } catch (e) {
         res.writeHead(400);
         res.end('Invalid Payload');
@@ -46,7 +65,6 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-
 
   // Endpoint 2: The frontend UI polls this to get the latest metric
   if (req.url === '/api/live' && req.method === 'GET') {
