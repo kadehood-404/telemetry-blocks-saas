@@ -24,20 +24,26 @@
   <script src="telemetry-card.js"></script>
   <script src="telemetry-chart.js"></script>
   
-  <script>
+    <script>
     const cardNode = document.getElementById('ggr-counter');
     const chartNode = document.getElementById('ggr-stream-chart');
     
-    let baseValue = 450;
-    
-    // Simulating rapid, zero-lag streaming intervals targeting components
-    setInterval(() => {
-      const volatility = (Math.random() - 0.5) * 40;
-      baseValue = Math.max(100, Math.floor(baseValue + volatility));
-      
-      cardNode.setAttribute('value', baseValue);
-      chartNode.setAttribute('stream-value', baseValue);
-    }, 250);
+    async function fetchLiveMetrics() {
+      try {
+        const response = await fetch('/api/live');
+        const data = await response.json();
+        
+        // Pass the actual client data received by the server to your elements
+        cardNode.setAttribute('value', data.value);
+        chartNode.setAttribute('stream-value', data.value);
+      } catch (err) {
+        console.error("Dashboard connection dropped:", err);
+      }
+    }
+
+    // Continuously check the server for fresh client metrics every 200ms
+    setInterval(fetchLiveMetrics, 200);
   </script>
+
 </body>
 </html>
