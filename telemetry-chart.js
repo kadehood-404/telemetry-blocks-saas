@@ -1,11 +1,8 @@
 // telemetry-chart.js
 class TelemetryChart {
-    constructor(canvasId, maxPoints = 100) {
+    constructor(canvasId, maxPoints = 80, themeColor = '#00ffcc', fillAlpha = 0.12) {
         this.canvas = document.getElementById(canvasId);
-        if (!this.canvas) {
-            console.error(`Canvas element with ID '${canvasId}' not found.`);
-            return;
-        }
+        if (!this.canvas) return;
         
         this.ctx = this.canvas.getContext('2d');
         this.maxPoints = maxPoints;
@@ -13,13 +10,13 @@ class TelemetryChart {
         this.head = 0;
         this.count = 0;
         
-        // Premium dashboard design theme parameters
+        // Dynamic structural themes based on configuration parameters
         this.colors = {
-            line: '#00ffcc',
-            grid: 'rgba(255, 255, 255, 0.05)',
-            text: '#64748b',
-            fillStart: 'rgba(0, 255, 204, 0.12)',
-            fillEnd: 'rgba(0, 255, 204, 0)'
+            line: themeColor,
+            grid: 'rgba(255, 255, 255, 0.03)',
+            text: '#475569',
+            fillStart: themeColor + Math.floor(fillAlpha * 255).toString(16).padStart(2, '0'),
+            fillEnd: themeColor + '00'
         };
         
         this.resize();
@@ -32,7 +29,6 @@ class TelemetryChart {
         this.width = this.canvas.clientWidth;
         this.height = this.canvas.clientHeight;
         
-        // Scale canvas backing store instantly for crisp rendering on high-DPI screens
         this.canvas.width = this.width * dpr;
         this.canvas.height = this.height * dpr;
         this.ctx.scale(dpr, dpr);
@@ -47,22 +43,20 @@ class TelemetryChart {
     drawGrid(yMin, yMax) {
         this.ctx.strokeStyle = this.colors.grid;
         this.ctx.lineWidth = 1;
-        this.ctx.font = '10px monospace';
+        this.ctx.font = '9px monospace';
         this.ctx.fillStyle = this.colors.text;
 
-        const lines = 4;
+        const lines = 3;
         for (let i = 0; i <= lines; i++) {
             const y = (this.height / lines) * i;
             
-            // Draw clean horizontal background lines
             this.ctx.beginPath();
             this.ctx.moveTo(0, y);
             this.ctx.lineTo(this.width, y);
             this.ctx.stroke();
 
-            // Right-aligned localized baseline axis metrics
             const val = yMax - ((yMax - yMin) / lines) * i;
-            this.ctx.fillText(Math.floor(val).toString(), this.width - 28, y - 4);
+            this.ctx.fillText(Math.floor(val).toString(), this.width - 24, y - 4);
         }
     }
 
@@ -71,7 +65,6 @@ class TelemetryChart {
         
         this.ctx.clearRect(0, 0, this.width, this.height);
 
-        // Dynamic auto-scaling bound configurations
         let yMin = Infinity;
         let yMax = -Infinity;
         for (let i = 0; i < this.count; i++) {
@@ -80,17 +73,14 @@ class TelemetryChart {
             if (val > yMax) yMax = val;
         }
         
-        // Prevent crashes on static inputs or flatlines
-        if (yMax === yMin) { yMax += 10; yMin -= 10; }
+        if (yMax === yMin) { yMax += 5; yMin -= 5; }
         const yRange = yMax - yMin;
 
-        // 1. Draw Grid Underlay Layer
         this.drawGrid(yMin, yMax);
 
         const stepX = this.width / (this.maxPoints - 1);
         const startIndex = this.count === this.maxPoints ? this.head : 0;
 
-        // 2. Generate Hardware Accelerated Path Construction Loop
         const path = new Path2D();
         for (let i = 0; i < this.count; i++) {
             const bufferIndex = (startIndex + i) % this.maxPoints;
@@ -106,7 +96,6 @@ class TelemetryChart {
             }
         }
 
-        // 3. Render Area Fill Segment Below the Path
         if (this.count > 1) {
             const fillPath = new Path2D(path);
             const lastX = (this.count - 1) * stepX;
@@ -122,8 +111,7 @@ class TelemetryChart {
             this.ctx.fill(fillPath);
         }
 
-        // 4. Paint Primary Core Stroke Path Accent Over the Area
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 1.75;
         this.ctx.strokeStyle = this.colors.line;
         this.ctx.lineJoin = 'round';
         this.ctx.lineCap = 'round';
@@ -132,50 +120,66 @@ class TelemetryChart {
 }
 
 // ============================================================================
-// LIVE SIMULATION & DRIVER ENGINE
+// CLIENT SIMULATION METRICS RUNTIME
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    const canvasId = 'telemetryCanvas';
-    const metricTextId = 'metricValue';
-    
-    // Check if the HTML anchor container placeholder exists before launching frame ticks
-    if (!document.getElementById(canvasId)) {
-        console.warn(`Telemetry runtime paused: '#${canvasId}' canvas element missing from template.`);
-        return;
-    }
+    // Instantiate 3 unique, isolated canvas charts
+    const chartOps = new TelemetryChart('canvasOps', 90, '#00ffcc', 0.12);
+    const chartLatency = new TelemetryChart('canvasLatency', 90, '#a855f7', 0.10);
+    const chartErrors = new TelemetryChart('canvasErrors', 90, '#f43f5e', 0.08);
 
-    // Initialize chart with 120 tracking intervals
-    const chart = new TelemetryChart(canvasId, 120);
-    const metricLabelNode = document.getElementById(metricTextId);
+    // Cache structural DOM element hooks
+    const domOps = document.getElementById('opsValue');
+    const domLatency = document.getElementById('latencyValue');
+    const domErrors = document.getElementById('errorValue');
+    const domErrorPill = document.getElementById('errorStatusPill');
 
     let tick = 0;
-    
-    function executionFrameLoop() {
-        tick += 0.04;
-        
-        // Multi-frequency sinusoidal algorithms to mimic complex servers
-        const coreSignal = Math.sin(tick) * 200;
-        const structuralWave = Math.cos(tick * 1.7) * 80;
-        const hardwareJitter = (Math.random() - 0.5) * 35;
-        
-        // Map calculations directly into real operations data ranges
-        const generatedMetric = Math.max(150, Math.floor(650 + coreSignal + structuralWave + hardwareJitter));
-        
-        // Feed real data metrics array buffer window
-        chart.push(generatedMetric);
-        
-        // Mirror current operations scale string explicitly to structural layout card text element
-        if (metricLabelNode) {
-            metricLabelNode.textContent = generatedMetric.toLocaleString();
+
+    function pipelineSimulatorLoop() {
+        tick += 0.03;
+
+        // 1. Ingest Throughput Engine Calculation
+        const baseOps = 1450 + Math.sin(tick) * 350 + Math.cos(tick * 2.5) * 120;
+        const currentOps = Math.floor(baseOps + (Math.random() - 0.5) * 60);
+        chartOps.push(currentOps);
+        if (domOps) domOps.textContent = currentOps.toLocaleString();
+
+        // 2. Latency Pipeline Simulation (with periodic random lag spike jumps)
+        let currentLatency = Math.floor(22 + (Math.sin(tick * 0.8) * 8) + (Math.random() * 4));
+        if (Math.random() > 0.97) { 
+            currentLatency += Math.floor(45 + Math.random() * 60); // Simulated garbage collection freeze
+        }
+        chartLatency.push(currentLatency);
+        if (domLatency) domLatency.textContent = currentLatency.toString();
+
+        // 3. Error Rate Delta calculation 
+        let errorRate = Math.abs(Math.sin(tick * 0.4) * Math.cos(tick * 0.4) * 1.8) + (Math.random() * 0.15);
+        if (currentLatency > 50) errorRate += (Math.random() * 2.2); // Spikes on heavy network lag load
+        chartErrors.push(errorRate);
+        if (domErrors) domErrors.textContent = errorRate.toFixed(2);
+
+        // Update state color indicator tags dynamically
+        if (domErrorPill) {
+            if (errorRate > 1.5) {
+                domErrorPill.textContent = 'Degraded';
+                domErrorPill.style.background = 'rgba(244,63,94,0.2)';
+            } else {
+                domErrorPill.textContent = 'Nominal';
+                domErrorPill.style.background = 'rgba(0,255,204,0.1)';
+                domErrorPill.style.color = '#00ffcc';
+            }
         }
 
-        // Refresh canvas surface layers
-        chart.render();
-        
-        requestAnimationFrame(executionFrameLoop);
+        // Render all instances simultaneously 
+        chartOps.render();
+        chartLatency.render();
+        chartErrors.render();
+
+        requestAnimationFrame(pipelineSimulatorLoop);
     }
 
-    // Fire off telemetry processing execution loops
-    executionFrameLoop();
+    // Launch pipeline
+    pipelineSimulatorLoop();
 });
