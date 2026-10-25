@@ -1,0 +1,18 @@
+<!-- 1. Include your asset via your telemetry subdomain CDN -->
+<script src="https://sigil-framework.space"></script>
+
+<!-- 2. Drop the tag straight into their markup -->
+<telemetry-card id="ggr-tracker">
+  <span slot="title">Live GGR (USD)</span>
+</telemetry-card>
+
+<script>
+  // 3. Connect their active data pipeline/WebSocket directly to the attribute
+  const card = document.getElementById('ggr-tracker');
+  
+  // Simulating incoming real-time streaming intervals
+  setInterval(() => {
+    const freshDataPoint = (Math.random() * 1000).toFixed(2);
+    card.setAttribute('value', freshDataPoint);
+  }, 1000);
+</script>
