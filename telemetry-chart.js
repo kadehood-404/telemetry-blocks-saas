@@ -125,3 +125,46 @@ class TelemetryChart {
         this.ctx.stroke();
     }
 }
+
+// Append directly to the bottom of telemetry-chart.js
+
+// 1. Instantiation Hook
+const chart = new TelemetryChart('telemetryCanvas', 120);
+
+// 2. High-Fidelity Multi-Frequency Signal Simulator
+let tick = 0;
+function generateTelemetryMetric() {
+    tick += 0.05;
+    
+    // Combine base frequencies with simulated high-frequency noise
+    const baseSignal = Math.sin(tick) * 25;
+    const secondaryOscillation = Math.cos(tick * 2.3) * 10;
+    const randomJitter = (Math.random() - 0.5) * 4;
+    
+    // Normalize to a simulated 0-100% telemetry value
+    const finalValue = Math.max(0, Math.min(100, 50 + baseSignal + secondaryOscillation + randomJitter));
+    
+    // Feed data straight into the continuous Ring Buffer
+    chart.push(finalValue);
+}
+
+// 3. Main Frame Loop Interface
+function frameLoop() {
+    // Inject mock metric package
+    generateTelemetryMetric();
+    
+    // Request hardware-accelerated canvas redraw
+    chart.render();
+    
+    requestAnimationFrame(frameLoop);
+}
+
+// 4. Safe Document Mount Trigger
+document.addEventListener('DOMContentLoaded', () => {
+    // Verify canvas DOM node exists before firing frame loops
+    if (document.getElementById('telemetryCanvas')) {
+        frameLoop();
+    } else {
+        console.warn("Telemetry Canvas anchor '#telemetryCanvas' not found in document DOM.");
+    }
+});
