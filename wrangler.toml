@@ -1,5 +1,3 @@
+#:schema node_modules/wrangler/config-schema.json
 name = "telemetry-showcase"
 pages_build_output_dir = "."
-
-[site]
-bucket = "."
